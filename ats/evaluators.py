@@ -46,7 +46,7 @@ def evaluate_anomaly_detector(evaluated_timeseries_df, anomaly_labels, details=F
         return evaluation_results
 
 
-def _calculate_model_scores(single_model_evaluation={}):
+def _calculate_model_scores(single_model_evaluation,test_data):
     anomalies = list(single_model_evaluation['sample_1'].keys())
     samples_n = len(single_model_evaluation)
     detections_per_anomaly = {}
@@ -62,10 +62,16 @@ def _calculate_model_scores(single_model_evaluation={}):
                 detections_per_anomaly[anomaly] +=1
             elif anomaly == 'false_positives':
                 detections_per_anomaly[anomaly] +=single_model_evaluation[sample][anomaly]
+    total_values = 0
+    for series in test_data:
+        total_values += len(series.columns) * len(series)
 
-    for anomaly,counts in detections_per_anomaly.items():
-        avg_detections_per_anomaly[anomaly] = counts/samples_n if anomaly != 'false_positives' else counts
-
+    for anomaly,count in detections_per_anomaly.items():
+        if anomaly != 'false_positives':
+            avg_detections_per_anomaly[anomaly + '_ratio'] = count/samples_n
+        else:
+            avg_detections_per_anomaly[anomaly + '_count'] = count
+            avg_detections_per_anomaly[anomaly + '_ratio'] = count/total_values
     return avg_detections_per_anomaly
 
 
@@ -102,7 +108,7 @@ class Evaluator():
             flagged_dataset = _get_model_output(dataset_copies[j],model)
             for i,sample_df in enumerate(flagged_dataset):
                 single_model_evaluation[f'sample_{i+1}'] = evaluate_anomaly_detector(sample_df,anomaly_labels_list[i])
-            models_scores[model_name] = _calculate_model_scores(single_model_evaluation)
+            models_scores[model_name] = _calculate_model_scores(single_model_evaluation,self.test_data)
             j+=1
 
         return models_scores
