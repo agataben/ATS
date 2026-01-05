@@ -14,40 +14,6 @@ def _format_for_anomaly_detector(df,synthetic=False):
     df = df.drop(columns=['anomaly_label'],inplace=False)
     return df,anomaly_labels
 
-def evaluate_anomaly_detector(evaluated_timeseries_df, anomaly_labels, details=False):
-
-    evaluated_anomaly_flags = evaluated_timeseries_df.filter(like='anomaly')
-    if len(evaluated_anomaly_flags.columns) == 1 and len(evaluated_timeseries_df.columns)>2:
-        raise NotImplementedError('The detector needs to flag anomalies for each quantity of the timeseries')
-    evaluation_results = {}
-    evaluation_details = {}
-    for anomaly_label,frequency in anomaly_labels.value_counts(dropna=False).items():
-        anomaly_label_counts = 0
-        for time_index in evaluated_timeseries_df.index:
-            if anomaly_labels.loc[time_index] == anomaly_label:
-                for column in evaluated_anomaly_flags.columns:
-                    is_anomalous_value = evaluated_anomaly_flags.loc[time_index,column]
-                    if is_anomalous_value:
-                        if not anomaly_label_counts:
-                            evaluation_details[anomaly_label]={ time_index: {quantity: bool(evaluated_anomaly_flags.loc[time_index,quantity]) for quantity in evaluated_anomaly_flags.columns}}
-                        else:
-                            evaluation_details[anomaly_label][time_index]={quantity: bool(evaluated_anomaly_flags.loc[time_index,quantity]) for quantity in evaluated_anomaly_flags.columns}
-                        anomaly_label_counts += 1
-                        evaluation_results[anomaly_label] = True if anomaly_label is not None else anomaly_label_counts
-        if not anomaly_label_counts:
-            evaluation_results[anomaly_label] = False if anomaly_label is not None else 0
-
-    if None in evaluation_results.keys():
-        evaluation_results['false_positives'] = evaluation_results.pop(None)
-    if None in evaluation_details.keys():
-        evaluation_details['false_positives'] = evaluation_details.pop(None)
-
-    if details:
-        return evaluation_results,evaluation_details
-    else:
-        return evaluation_results
-
-
 def _calculate_model_scores(single_model_evaluation={}):
     model_scores = {}
     anomalies_count = 0
