@@ -109,3 +109,5 @@ Optionally:
 [2] **Navigating AGN variability with self-organizing maps**. Ylenia Maruccia, Demetra De Cicco, Stefano Cavuoti, Giuseppe Riccio, Paula Sánchez-Sáez, Maurizio Paolillo, Noemi Lery Borrelli, Riccardo Crupi, Massimo Brescia https://www.aanda.org/articles/aa/pdf/2025/07/aa53866-25.pdf
 
 [3] **Timeseria: an object-oriented time series processing library**. Stefano Alberto Russo, Giuliano Taffoni, Luca Bortolussi, https://www.sciencedirect.com/science/article/pii/S2352711025000032
+
+[4] **Hunting the outliers: Machine learning for anomalous time series detection**. Natale De Bonis, Simone Vaccaro, Ylenia Maruccia, Giuseppe Riccio, Riccardo Crupi, Stella Rubini, Demetra De Cicco, Massimo Brescia, Stefano Cavuoti, https://www.sciencedirect.com/science/article/pii/S2213133725001222
