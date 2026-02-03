@@ -53,7 +53,7 @@ A simple statistical method based on computing average values over a given perio
 
 ### IFSOMAnomalyDetector
 
-Anomaly detector based on Isolation Forest and Self-organizing maps [1]
+Anomaly detector based on Isolation Forest and Self-organizing maps [2, 4]
 
 - **class:** `anomaly_detectors.ml.ifsom.IFSOMAnomalyDetector `
 
@@ -61,7 +61,7 @@ Anomaly detector based on Isolation Forest and Self-organizing maps [1]
 
 ### COMAnomalyDetector
 
-A robust anomaly detector based on the Comedian (COM) estimator [2]
+A robust anomaly detector based on the Comedian (COM) estimator [1]
 
 **class:** `anomaly_detectors.stats.robust.COMAnomalyDetector`
 
@@ -69,7 +69,7 @@ A robust anomaly detector based on the Comedian (COM) estimator [2]
 
 ### NHARAnomalyDetector
 
-A robust anomaly detection technique based on non-linear regression via neural networks and residuals modelling [2]
+A robust anomaly detection technique based on non-linear regression via neural networks and residuals modelling [1]
 
 - **class:** `anomaly_detectors.stats.robust.HARAnomalyDetector `
 
