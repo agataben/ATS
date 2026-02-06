@@ -156,3 +156,149 @@ class TestUtils(unittest.TestCase):
         df_missing = self.df.drop(columns=["fitness"])
         with self.assertRaises(KeyError):
             plot_from_df(df_missing, "avg_err", "fitness", {})
+
+    def test_model_selector(self):
+        from ..utils import select_models
+        models = select_models()
+        self.assertTrue(len(models) > 0)
+
+        # Use MinMaxAnomalyDetector as a reference for capability-based selection
+        from ..anomaly_detectors.naive.minmax import MinMaxAnomalyDetector
+        requested_capabilities = {
+            "training": {
+                "mode": None,
+                "update": False
+            },
+            "inference": {
+                "streaming": False,
+                "dependency": "series",
+                "granularity": "point-labels"
+            },
+            "data": {
+                "dimensionality": "univariate-single",
+                "sampling": "irregular"
+            }
+        }
+
+        selected = select_models(requested_capabilities)
+        self.assertIn(MinMaxAnomalyDetector, selected)
+
+    def test_model_selector_no_filter_returns_all(self):
+        from ..utils import select_models
+        from ..anomaly_detectors import (
+            MinMaxAnomalyDetector, ZScoreAnomalyDetector,
+            COMAnomalyDetector, HARAnomalyDetector, NHARAnomalyDetector,
+            IFSOMAnomalyDetector, LinearRegressionAnomalyDetector, LSTMAnomalyDetector,
+        )
+        all_expected = {
+            MinMaxAnomalyDetector, ZScoreAnomalyDetector,
+            COMAnomalyDetector, HARAnomalyDetector, NHARAnomalyDetector,
+            IFSOMAnomalyDetector, LinearRegressionAnomalyDetector, LSTMAnomalyDetector,
+        }
+        models = select_models()
+        self.assertEqual(set(models), all_expected)
+
+    def test_model_selector_by_training_mode_none(self):
+        from ..utils import select_models
+        from ..anomaly_detectors import MinMaxAnomalyDetector, ZScoreAnomalyDetector
+        selected = select_models({"training": {"mode": None}})
+        self.assertEqual(set(selected), {MinMaxAnomalyDetector, ZScoreAnomalyDetector})
+
+    def test_model_selector_by_training_mode_unsupervised(self):
+        from ..utils import select_models
+        from ..anomaly_detectors import (
+            COMAnomalyDetector, HARAnomalyDetector, NHARAnomalyDetector,
+            IFSOMAnomalyDetector,
+        )
+        selected = select_models({"training": {"mode": "unsupervised"}})
+        self.assertEqual(set(selected), {
+            COMAnomalyDetector, HARAnomalyDetector, NHARAnomalyDetector,
+            IFSOMAnomalyDetector,
+        })
+
+    def test_model_selector_by_training_mode_semi_supervised(self):
+        from ..utils import select_models
+        from ..anomaly_detectors import LinearRegressionAnomalyDetector, LSTMAnomalyDetector
+        selected = select_models({"training": {"mode": "semi-supervised"}})
+        self.assertEqual(set(selected), {LinearRegressionAnomalyDetector, LSTMAnomalyDetector})
+
+    def test_model_selector_by_inference_dependency_window(self):
+        from ..utils import select_models
+        from ..anomaly_detectors import LinearRegressionAnomalyDetector, LSTMAnomalyDetector
+        selected = select_models({"inference": {"dependency": "window"}})
+        self.assertEqual(set(selected), {LinearRegressionAnomalyDetector, LSTMAnomalyDetector})
+
+    def test_model_selector_by_inference_granularity_series(self):
+        from ..utils import select_models
+        from ..anomaly_detectors import IFSOMAnomalyDetector
+        selected = select_models({"inference": {"granularity": "series"}})
+        self.assertEqual(set(selected), {IFSOMAnomalyDetector})
+
+    def test_model_selector_by_sampling_irregular(self):
+        from ..utils import select_models
+        from ..anomaly_detectors import MinMaxAnomalyDetector, ZScoreAnomalyDetector
+        selected = select_models({"data": {"sampling": "irregular"}})
+        self.assertEqual(set(selected), {MinMaxAnomalyDetector, ZScoreAnomalyDetector})
+
+    def test_model_selector_by_dimensionality_scalar(self):
+        """Requesting a single dimensionality value matches models that include it in their list."""
+        from ..utils import select_models
+        from ..anomaly_detectors import (
+            MinMaxAnomalyDetector, COMAnomalyDetector, HARAnomalyDetector,
+            NHARAnomalyDetector, IFSOMAnomalyDetector,
+        )
+        selected = select_models({"data": {"dimensionality": "univariate-multi"}})
+        self.assertEqual(set(selected), {
+            MinMaxAnomalyDetector, COMAnomalyDetector, HARAnomalyDetector,
+            NHARAnomalyDetector, IFSOMAnomalyDetector,
+        })
+
+    def test_model_selector_by_dimensionality_list(self):
+        """Requesting a list of dimensionalities matches models supporting ALL of them (subset check)."""
+        from ..utils import select_models
+        from ..anomaly_detectors import (
+            MinMaxAnomalyDetector, COMAnomalyDetector, HARAnomalyDetector,
+            NHARAnomalyDetector,
+        )
+        selected = select_models({"data": {"dimensionality": ["univariate-multi", "multivariate-single"]}})
+        self.assertEqual(set(selected), {
+            MinMaxAnomalyDetector, COMAnomalyDetector, HARAnomalyDetector,
+            NHARAnomalyDetector,
+        })
+
+    def test_model_selector_multiple_sections(self):
+        """Filtering across multiple capability sections at once."""
+        from ..utils import select_models
+        from ..anomaly_detectors import MinMaxAnomalyDetector, ZScoreAnomalyDetector
+        selected = select_models({
+            "training": {"mode": None},
+            "data": {"sampling": "irregular"},
+        })
+        self.assertEqual(set(selected), {MinMaxAnomalyDetector, ZScoreAnomalyDetector})
+
+    def test_model_selector_multiple_fields_narrow(self):
+        """Combining multiple fields to narrow down to a unique model."""
+        from ..utils import select_models
+        from ..anomaly_detectors import IFSOMAnomalyDetector
+        selected = select_models({
+            "training": {"mode": "unsupervised"},
+            "inference": {"granularity": "series"},
+        })
+        self.assertEqual(set(selected), {IFSOMAnomalyDetector})
+
+    def test_model_selector_no_match(self):
+        """Requesting a combination no model satisfies returns an empty list."""
+        from ..utils import select_models
+        selected = select_models({
+            "training": {"mode": "supervised"},
+        })
+        self.assertEqual(selected, [])
+
+    def test_model_selector_no_match_contradictory(self):
+        """Contradictory constraints across sections return empty."""
+        from ..utils import select_models
+        selected = select_models({
+            "training": {"mode": None},
+            "data": {"sampling": "regular"},
+        })
+        self.assertEqual(selected, [])

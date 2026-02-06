@@ -34,6 +34,7 @@ def generate_timeseries_df(start='2025-06-10 14:00:00',  tz='UTC', freq='h', ent
     df.index.name = 'timestamp'
     return df
 
+
 def convert_timeseries_df_to_timeseries(timeseries_df):
     timeseries = TimeSeries.from_df(timeseries_df)
 
@@ -43,6 +44,7 @@ def convert_timeseries_df_to_timeseries(timeseries_df):
                 datapoint.data_indexes[data_label] = datapoint.data.pop(data_label)
 
     return timeseries
+
 
 def convert_timeseries_to_timeseries_df(timeseries):
     timeseries_df = TimeSeries.to_df(timeseries)
@@ -57,6 +59,7 @@ def convert_timeseries_to_timeseries_df(timeseries):
     timeseries_df.index.freq = timeseries_df.index.inferred_freq
 
     return timeseries_df
+
 
 def plot_timeseries_df(timeseries_df, *args, **kwargs):
 
@@ -84,7 +87,7 @@ def normalize_parameter(df, parameter):
         return pd.Series(1.0, index=df.index, name=parameter)
     else:
         return (df[parameter] - min_parameter) / (max_parameter - min_parameter).astype(float)
-    
+
 def normalize_df(df, parameters_subset=None,save=False):
     """
     Normalizes a DataFrame using (value-min)/(max-min).
@@ -173,7 +176,8 @@ def plot_3d_interactive(df,x="avg_err",y="max_err",z="ks_pvalue",color="fitness"
         return None
     except Exception as e:
         logger.error("Unexpected error while creating 3D interactive plot: %s", e)
-        return None     
+        return None
+
 
 def save_df_to_csv(df, outputfile="output.csv"):
     """
@@ -271,7 +275,7 @@ def find_best_parameter(df, parameter, mode="min"):
     except Exception as e:
         logger.error(f"Error finding {mode} for '{parameter}': {e} ({type(e).__name__})")
         return None
-    
+
 
 def plot_from_df(df, x,y,fixed_parameters=None):
     """
@@ -296,16 +300,16 @@ def plot_from_df(df, x,y,fixed_parameters=None):
             if key not in df_filtered.columns:
                 logger.warning(f"'{key}' not in DataFrame columns. Skipping filter.")
                 continue
-            
+
             if isinstance(val, (list, tuple, set)):
                 df_filtered = df_filtered[df_filtered[key].isin(val)]
             else:
                 df_filtered = df_filtered[df_filtered[key] == val]
-        
+
     df_filtered = df_filtered.sort_values(by=x)
 
     context_info = " | ".join(f"{k}={v}" for k, v in (fixed_parameters or {}).items())
- 
+
     try:
         fig, ax = plt.subplots(figsize=(8, 5))
         ax.plot(df_filtered[x], df_filtered[y], marker="o")
@@ -432,6 +436,7 @@ def timeseries_df_to_list_of_timeseries_df(timeseries_df, anomaly_labels=False):
 def list_of_timeseries_df_to_timeseries_df(list_of_timeseries_df):
     return pd.concat(list_of_timeseries_df, axis=1)
 
+
 def ensure_full_reproducibility(seed=0):
     random.seed(seed)
     np.random.seed(seed)
@@ -443,3 +448,80 @@ def ensure_full_reproducibility(seed=0):
         tf.random.set_seed(seed)
         tf.config.experimental.enable_op_determinism()
         os.environ["TF_DETERMINISTIC_OPS"] = "1"
+
+
+def select_models(capabilities={}):
+
+    import inspect
+
+    def get_classes(module):
+        """
+        Return a list of class objects defined/imported in `module`.
+        """
+        return [
+            obj
+            for obj in vars(module).values()
+            if inspect.isclass(obj)
+        ]
+
+    from . import anomaly_detectors
+    model_classes = get_classes(anomaly_detectors)
+    logger.debug('Searching in #{} models'.format(len(model_classes)))
+
+    selected_model_classes = []
+
+    def _matches_capability(actual_value, requested_value):
+        """
+        Return True if the requested_value is compatible with actual_value.
+        Handles scalar vs list-like values on either side.
+        """
+        actual_is_list = isinstance(actual_value, (list, set, tuple))
+        requested_is_list = isinstance(requested_value, (list, set, tuple))
+
+        if requested_is_list:
+            requested_set = set(requested_value)
+            if actual_is_list:
+                return requested_set.issubset(set(actual_value))
+            return actual_value in requested_set
+
+        # requested is scalar
+        if actual_is_list:
+            return requested_value in actual_value
+        return actual_value == requested_value
+
+    for model_class in model_classes:
+        logger.debug('Checking capabilities against #{}'.format(model_class.__name__))
+
+        # If capabilities match, add them to the selected_model_classes list
+        if not capabilities:
+            selected_model_classes.append(model_class)
+            continue
+
+        try:
+            model_capabilities = model_class.capabilities
+        except Exception as e:
+            logger.warning(
+                f'Skipping {model_class.__name__} due to invalid capabilities: {e}'
+            )
+            continue
+
+        matches = True
+        for section, fields in capabilities.items():
+            if section not in model_capabilities:
+                matches = False
+                break
+            for field, requested_value in fields.items():
+                if field not in model_capabilities[section]:
+                    matches = False
+                    break
+                actual_value = model_capabilities[section][field]
+                if not _matches_capability(actual_value, requested_value):
+                    matches = False
+                    break
+            if not matches:
+                break
+
+        if matches:
+            selected_model_classes.append(model_class)
+
+    return selected_model_classes
