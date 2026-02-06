@@ -179,7 +179,7 @@ class Evaluator():
     @staticmethod
     def plot(evaluation, plot_type='radar', log_compress=None):
 
-        if type != 'radar':
+        if plot_type != 'radar':
             raise ValueError('Only "radar" plot type is currently supported')
 
         def radar_plot(scores_dict, title):
