@@ -304,10 +304,10 @@ class IFSOMAnomalyDetector(AnomalyDetector):
         #==============================
 
         if not isinstance(data, list):
-            raise TypeError('Only lists of Pandas DataFrames are supported')
+            raise NotImplemented('Only Dataset (lists of Pandas DataFrames) are supported')
         for item in data:
             if not isinstance(item, pd.DataFrame):
-                raise TypeError('Only Pandas DataFrame are supported as data items')
+                raise TypeError('Dataset (list) items must me Pandas DataFrames')
 
         # Merge separate timeseries into a single one
         df = pd.concat(data, axis=1)
