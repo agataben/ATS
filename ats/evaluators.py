@@ -1,4 +1,3 @@
-from .anomaly_detectors.naive import MinMaxAnomalyDetector
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
